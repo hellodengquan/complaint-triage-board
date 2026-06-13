@@ -1,18 +1,19 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { LayoutDashboard, BarChart3, RefreshCw, Bell, Settings } from 'lucide-react'
 import { initialComplaints, STATUS, PRIORITIES } from './data/mockData'
+import usePersistentState from './hooks/usePersistentState'
 import BoardColumn from './components/BoardColumn'
 import FilterBar from './components/FilterBar'
 import StatsPanel from './components/StatsPanel'
 import './App.css'
 
 function App() {
-  const [complaints, setComplaints] = useState(initialComplaints)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedPriority, setSelectedPriority] = useState('all')
-  const [selectedAssignee, setSelectedAssignee] = useState('all')
-  const [activeView, setActiveView] = useState('board')
+  const [complaints, setComplaints, resetComplaints] = usePersistentState('complaints', initialComplaints)
+  const [searchQuery, setSearchQuery, resetSearchQuery] = usePersistentState('searchQuery', '')
+  const [selectedCategory, setSelectedCategory, resetCategory] = usePersistentState('selectedCategory', 'all')
+  const [selectedPriority, setSelectedPriority, resetPriority] = usePersistentState('selectedPriority', 'all')
+  const [selectedAssignee, setSelectedAssignee, resetAssignee] = usePersistentState('selectedAssignee', 'all')
+  const [activeView, setActiveView, resetActiveView] = usePersistentState('activeView', 'board')
 
   const assignees = useMemo(() => {
     return [...new Set(complaints.map(c => c.assignee))]
@@ -57,15 +58,15 @@ function App() {
   }
 
   const handleDragStart = () => {
-    // 拖拽开始事件
   }
 
   const handleReset = () => {
-    setComplaints(initialComplaints)
-    setSearchQuery('')
-    setSelectedCategory('all')
-    setSelectedPriority('all')
-    setSelectedAssignee('all')
+    resetComplaints()
+    resetSearchQuery()
+    resetCategory()
+    resetPriority()
+    resetAssignee()
+    resetActiveView()
   }
 
   const sortedByPriority = (list) => {
