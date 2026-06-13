@@ -1,10 +1,13 @@
-import { useMemo } from 'react'
-import { LayoutDashboard, BarChart3, RefreshCw, Bell, Settings } from 'lucide-react'
+import { useMemo, useRef } from 'react'
+import { LayoutDashboard, BarChart3, RefreshCw, Bell, Settings, Download, Upload } from 'lucide-react'
 import { initialComplaints, STATUS, PRIORITIES } from './data/mockData'
 import usePersistentState from './hooks/usePersistentState'
+import useToast from './hooks/useToast'
 import BoardColumn from './components/BoardColumn'
 import FilterBar from './components/FilterBar'
 import StatsPanel from './components/StatsPanel'
+import { ToastContainer } from './components/Toast'
+import { exportToJson, importFromJson } from './utils/importExport'
 import './App.css'
 
 function App() {
@@ -14,6 +17,9 @@ function App() {
   const [selectedPriority, setSelectedPriority, resetPriority] = usePersistentState('selectedPriority', 'all')
   const [selectedAssignee, setSelectedAssignee, resetAssignee] = usePersistentState('selectedAssignee', 'all')
   const [activeView, setActiveView, resetActiveView] = usePersistentState('activeView', 'board')
+
+  const fileInputRef = useRef(null)
+  const { toasts, removeToast, showSuccess, showWarning, showError } = useToast()
 
   const assignees = useMemo(() => {
     return [...new Set(complaints.map(c => c.assignee))]
@@ -67,6 +73,48 @@ function App() {
     resetPriority()
     resetAssignee()
     resetActiveView()
+    showSuccess('数据已重置')
+  }
+
+  const handleExport = () => {
+    const result = exportToJson({
+      complaints,
+      searchQuery,
+      selectedCategory,
+      selectedPriority,
+      selectedAssignee,
+      activeView,
+    })
+    if (result.success) {
+      showSuccess(`已导出：${result.fileName}`)
+    } else {
+      showError('导出失败，浏览器不支持')
+    }
+  }
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const result = await importFromJson(file)
+
+    if (result.success && result.data) {
+      setComplaints(result.data.complaints)
+      setSearchQuery(result.data.searchQuery)
+      setSelectedCategory(result.data.selectedCategory)
+      setSelectedPriority(result.data.selectedPriority)
+      setSelectedAssignee(result.data.selectedAssignee)
+      setActiveView(result.data.activeView)
+      showSuccess(`导入成功：${result.data.complaints.length} 条客诉`)
+    } else {
+      showWarning(result.message || '导入失败')
+    }
+
+    e.target.value = ''
   }
 
   const sortedByPriority = (list) => {
@@ -103,6 +151,19 @@ function App() {
           </div>
         </div>
         <div className="header-right">
+          <button className="header-btn export-btn" onClick={handleExport} title="导出 JSON">
+            <Download size={18} />
+          </button>
+          <button className="header-btn import-btn" onClick={handleImportClick} title="导入 JSON">
+            <Upload size={18} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
           <button className="header-btn" onClick={handleReset} title="重置数据">
             <RefreshCw size={18} />
           </button>
@@ -156,6 +217,8 @@ function App() {
           </div>
         )}
       </main>
+
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   )
 }
